@@ -6,7 +6,10 @@ public class RoomItem : MonoBehaviour
 {
     public TextMeshProUGUI roomNameText;
     public TextMeshProUGUI playerCountText;
+
     private string roomName;
+
+
 
     public void SetRoomInfo(string name, int playerCount, int maxPlayers)
     {
