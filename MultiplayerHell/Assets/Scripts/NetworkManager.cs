@@ -30,6 +30,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     private string currentLobbyName;
     private bool isInitialConnection = true;
+
+
+
     void Start()
     {
         connectingMassage.gameObject.SetActive(true);
@@ -50,7 +53,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         }
         else if (!string.IsNullOrEmpty(currentLobbyName))
         {
-            // We're returning from a room, so rejoin the lobby
             Debug.Log($"Reconnected to Master. Rejoining lobby: {currentLobbyName}");
             TypedLobby lobby = new TypedLobby(currentLobbyName, LobbyType.Default);
             PhotonNetwork.JoinLobby(lobby);
@@ -121,7 +123,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         {
             GameObject roomGO = Instantiate(roomPrefab, roomListParentObject);
 
-            RoomItem roomItem = roomGO.GetComponent<RoomItem>();
+            RoomItem roomItem = roomGO.GetComponent<RoomItem>(); //Find how to not use getcomponent
 
             roomItem?.SetRoomInfo(room.Name, room.PlayerCount, room.MaxPlayers);
         }
@@ -182,7 +184,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         base.OnDisconnected(cause);
         Debug.LogWarning($"Disconnected from Photon servers. Cause: {cause}");
 
-        // Reset all panels and show connecting message
         inRoomPanel.SetActive(false);
         createRoomPanel.SetActive(false);
         roomListPanel.SetActive(false);
@@ -190,10 +191,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         connectingMassage.gameObject.SetActive(true);
         connectingMassage.text = $"Disconnected: {cause}. Reconnecting...";
 
-        // Reset initial connection flag
         isInitialConnection = true;
 
-        // Try to reconnect
         PhotonNetwork.ConnectUsingSettings();
     }
 
