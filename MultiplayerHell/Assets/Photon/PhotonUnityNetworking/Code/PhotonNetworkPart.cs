@@ -2571,5 +2571,10 @@ namespace Photon.Pun
                 }
             }
         }
+
+        public static IEnumerable<RoomInfo> GetCustomRoomList(TypedLobby @default)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
