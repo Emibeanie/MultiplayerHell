@@ -26,24 +26,26 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [SerializeField] GameObject inRoomPanel;
     [SerializeField] TextMeshProUGUI inRoomMassage;
 
-    private List<RoomInfo> cachedRoomList = new List<RoomInfo>();
+    [Header("Errors")]
+    [SerializeField] TextMeshProUGUI errorMessageText;
 
+
+    private Dictionary<string, RoomInfo> cachedRoomList = new Dictionary<string, RoomInfo>();
     private string currentLobbyName;
     private bool isInitialConnection = true;
-
-
 
     void Start()
     {
         connectingMassage.gameObject.SetActive(true);
         connectingMassage.text = "Connecting to the main server...";
         PhotonNetwork.ConnectUsingSettings();
+
+        ResetErrorMessageText();
     }
 
     public override void OnConnectedToMaster()
     {
         base.OnConnectedToMaster();
-        Debug.Log("Connected to Master Server");
 
         if (isInitialConnection)
         {
@@ -57,10 +59,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             TypedLobby lobby = new TypedLobby(currentLobbyName, LobbyType.Default);
             PhotonNetwork.JoinLobby(lobby);
         }
+
+        ResetErrorMessageText();
     }
 
     public void CreateAndJoinLobbyByName()
     {
+        if (lobbyNameField.text == string.Empty)
+        {
+            ChangeErrorMessageText("Lobby name must contain at least one character");
+            return;
+        }
+
         currentLobbyName = lobbyNameField.text;
         TypedLobby lobby = new TypedLobby(currentLobbyName, LobbyType.Default);
         PhotonNetwork.JoinLobby(lobby);
@@ -74,43 +84,29 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         enterLobbyPanel.SetActive(false);
         roomListPanel.SetActive(true);
         createRoomPanel.SetActive(true);
+
+        ResetErrorMessageText();
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
     {
         base.OnRoomListUpdate(roomList);
 
-        if (cachedRoomList.Count <= 0)
+        for (int i = 0; i < roomList.Count; i++)
         {
-            cachedRoomList = roomList;
-        }
-        else
-        {
-            foreach (RoomInfo room in roomList)
+            RoomInfo info = roomList[i];
+            if (info.RemovedFromList)
             {
-                for (int i = 0; i < cachedRoomList.Count; i++)
-                {
-                    if (cachedRoomList[i].Name == room.Name)
-                    {
-                        List<RoomInfo> newList = cachedRoomList;
-
-                        if (room.RemovedFromList)
-                        {
-                            newList.Remove(newList[i]);
-                        }
-                        else
-                        {
-                            newList[i] = room;
-                        }
-
-                        cachedRoomList = newList;
-                    }
-                }
+                cachedRoomList.Remove(info.Name);
             }
-
+            else
+            {
+                cachedRoomList[info.Name] = info;
+            }
         }
         UpdateUI();
     }
+
 
     void UpdateUI()
     {
@@ -125,14 +121,26 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
             RoomItem roomItem = roomGO.GetComponent<RoomItem>(); //Find how to not use getcomponent
 
-            roomItem?.SetRoomInfo(room.Name, room.PlayerCount, room.MaxPlayers);
+            roomItem?.SetRoomInfo(room.Value.Name, room.Value.PlayerCount, room.Value.MaxPlayers);
         }
     }
 
     public void CreateRoomInCurrentLobby()
     {
+        if (roomName.text == string.Empty)
+        {
+            ChangeErrorMessageText("Room name must contain at least one character");
+            return;
+        }
+
+        if (maxPlayers.text == string.Empty || !int.TryParse(maxPlayers.text,out int maxPlayerInt) || maxPlayerInt <= 1)
+        {
+            ChangeErrorMessageText("Room max players must be filled and contain only a number bigger than 1");
+            return;
+        }
+
         string roomNameStr = roomName.text;
-        int maxPlayerInt = int.Parse(maxPlayers.text);
+       // int maxPlayerInt = int.Parse(maxPlayers.text);
 
         RoomOptions roomOptions = new RoomOptions();
         roomOptions.MaxPlayers = (byte)maxPlayerInt;
@@ -148,6 +156,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         base.OnCreatedRoom();
 
         Debug.Log($"Room '{PhotonNetwork.CurrentRoom.Name}' created in lobby '{currentLobbyName}'.");
+
+        ResetErrorMessageText();
+    }
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        base.OnCreateRoomFailed(returnCode, message);
+        ChangeErrorMessageText(message);
     }
 
     public override void OnJoinedRoom()
@@ -158,7 +173,15 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         roomListPanel.SetActive(false);
 
         inRoomPanel.SetActive(true);
-        inRoomMassage.text = $"You joined room {PhotonNetwork.CurrentRoom.Name} in {currentLobbyName}";
+        inRoomMassage.text = $"You joined room '{PhotonNetwork.CurrentRoom.Name}' in lobby '{currentLobbyName}'";
+
+        ResetErrorMessageText();
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        base.OnJoinRoomFailed(returnCode, message);
+        ChangeErrorMessageText(message);
     }
 
     public void ExitRoom()
@@ -195,5 +218,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         PhotonNetwork.ConnectUsingSettings();
     }
-
+    private void ResetErrorMessageText()
+    {
+        errorMessageText.text = "";
+    }
+    private void ChangeErrorMessageText(string text)
+    {
+        errorMessageText.text = text;
+    }
 }
