@@ -10,6 +10,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("Enter Lobby UI")]
     [SerializeField] TextMeshProUGUI connectingMassage;
     [SerializeField] GameObject enterLobbyPanel;
+    [SerializeField] TMP_InputField playerNicknameField;
     [SerializeField] TMP_InputField lobbyNameField;
 
     [Header("Room List UI")]
@@ -31,19 +32,17 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("Errors")]
     [SerializeField] TextMeshProUGUI errorMessageText;
 
-    private List<PlayerUIItem> currentInstantiatedPlayerList;
-    private Dictionary<string, RoomInfo> cachedRoomList = new Dictionary<string, RoomInfo>();
-    private string currentLobbyName;
-    private bool isInitialConnection = true;
+    private List<PlayerUIItem> _currentInstantiatedPlayerList = new();
+    private Dictionary<string, RoomInfo> _cachedRoomList = new();
+    private string _currentLobbyName;
+    private bool _isInitialConnection = true;
 
     void Start()
     {
         connectingMassage.gameObject.SetActive(true);
         connectingMassage.text = "Connecting to the main server...";
         PhotonNetwork.ConnectUsingSettings();
-
-        currentInstantiatedPlayerList = new List<PlayerUIItem>();
-
+        
         ResetErrorMessageText();
     }
 
@@ -51,16 +50,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         base.OnConnectedToMaster();
 
-        if (isInitialConnection)
+        if (_isInitialConnection)
         {
             connectingMassage.gameObject.SetActive(false);
             enterLobbyPanel.SetActive(true);
-            isInitialConnection = false;
+            _isInitialConnection = false;
         }
-        else if (!string.IsNullOrEmpty(currentLobbyName))
+        else if (!string.IsNullOrEmpty(_currentLobbyName))
         {
-            Debug.Log($"Reconnected to Master. Rejoining lobby: {currentLobbyName}");
-            TypedLobby lobby = new TypedLobby(currentLobbyName, LobbyType.Default);
+            Debug.Log($"Reconnected to Master. Rejoining lobby: {_currentLobbyName}");
+            TypedLobby lobby = new TypedLobby(_currentLobbyName, LobbyType.Default);
             PhotonNetwork.JoinLobby(lobby);
         }
 
@@ -69,27 +68,34 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void CreateAndJoinLobbyByName()
     {
+        if (playerNicknameField.text == string.Empty || playerNicknameField.text.Length < 3)
+        {
+            ChangeErrorMessageText("Player Nickname must contain at least 3 characters!");
+            return;
+        }
+        
+        PhotonNetwork.LocalPlayer.NickName = playerNicknameField.text;
+        
         if (lobbyNameField.text == string.Empty)
         {
-            ChangeErrorMessageText("Lobby name must contain at least one character");
+            ChangeErrorMessageText("Lobby name must contain at least 1 character");
             return;
         }
 
-        currentLobbyName = lobbyNameField.text;
-        TypedLobby lobby = new TypedLobby(currentLobbyName, LobbyType.Default);
+        _currentLobbyName = lobbyNameField.text;
+        TypedLobby lobby = new TypedLobby(_currentLobbyName, LobbyType.Default);
         PhotonNetwork.JoinLobby(lobby);
     }
 
     public override void OnJoinedLobby()
     {
         base.OnJoinedLobby();
-        Debug.Log($"Your are now connected to {currentLobbyName}");
 
         enterLobbyPanel.SetActive(false);
         roomListPanel.SetActive(true);
         createRoomPanel.SetActive(true);
 
-        cachedRoomList.Clear();
+        _cachedRoomList.Clear();
         ResetErrorMessageText();
     }
 
@@ -97,26 +103,22 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         base.OnLeftLobby();
 
-        cachedRoomList.Clear();
+        _cachedRoomList.Clear();
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
     {
         base.OnRoomListUpdate(roomList);
-
-        Debug.Log($"cached rooms: {cachedRoomList.Count} room list: {roomList.Count}");
-
-        for (int i = 0; i < roomList.Count; i++)
+        
+        foreach (var info in roomList)
         {
-            RoomInfo info = roomList[i];
-
             if (info.RemovedFromList)
             {
-                cachedRoomList.Remove(info.Name);
+                _cachedRoomList.Remove(info.Name);
             }
             else
             {
-                cachedRoomList[info.Name] = info;
+                _cachedRoomList[info.Name] = info;
             }
         }
 
@@ -141,11 +143,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         string roomNameStr = roomName.text;
        // int maxPlayerInt = int.Parse(maxPlayers.text);
 
-        RoomOptions roomOptions = new RoomOptions();
-        roomOptions.MaxPlayers = (byte)maxPlayerInt;
-        roomOptions.IsVisible = true;
+        RoomOptions roomOptions = new RoomOptions
+        {
+            MaxPlayers = (byte)maxPlayerInt,
+            IsVisible = true
+        };
 
-        TypedLobby currentLobby = new TypedLobby(currentLobbyName, LobbyType.Default);
+        TypedLobby currentLobby = new TypedLobby(_currentLobbyName, LobbyType.Default);
 
         PhotonNetwork.CreateRoom(roomNameStr, roomOptions, currentLobby);
     }
@@ -153,9 +157,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnCreatedRoom()
     {
         base.OnCreatedRoom();
-
-        Debug.Log($"Room '{PhotonNetwork.CurrentRoom.Name}' created in lobby '{currentLobbyName}'.");
-
+        
         ResetErrorMessageText();
     }
 
@@ -173,7 +175,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         roomListPanel.SetActive(false);
 
         inRoomPanel.SetActive(true);
-        inRoomMassage.text = $"You joined room '{PhotonNetwork.CurrentRoom.Name}' in lobby '{currentLobbyName}'";
+        inRoomMassage.text = $"Room '{PhotonNetwork.CurrentRoom.Name}' | Lobby '{_currentLobbyName}'";
         InitPlayerList();
 
         ResetErrorMessageText();
@@ -205,7 +207,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnLeftRoom()
     {
         base.OnLeftRoom();
-        Debug.Log($"Left room. Returning to lobby: {currentLobbyName}");
 
         inRoomPanel.SetActive(false);
         createRoomPanel.SetActive(true);
@@ -214,13 +215,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         roomName.text = "";
         maxPlayers.text = "";
 
-        cachedRoomList.Clear();
+        _cachedRoomList.Clear();
     }
 
     public override void OnDisconnected(DisconnectCause cause)
     {
         base.OnDisconnected(cause);
-        Debug.LogWarning($"Disconnected from Photon servers. Cause: {cause}");
 
         inRoomPanel.SetActive(false);
         createRoomPanel.SetActive(false);
@@ -229,7 +229,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         connectingMassage.gameObject.SetActive(true);
         connectingMassage.text = $"Disconnected: {cause}. Reconnecting...";
 
-        isInitialConnection = true;
+        _isInitialConnection = true;
 
         PhotonNetwork.ConnectUsingSettings();
     }
@@ -249,7 +249,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             Destroy(roomItem.gameObject);
         }
 
-        foreach (var room in cachedRoomList)
+        foreach (var room in _cachedRoomList)
         {
             RoomItem roomItem = Instantiate(roomPrefab, roomListParentObject);
 
@@ -259,17 +259,17 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     private void CreateNewPlayerUI(Player player)
     {
         var newPlayer = Instantiate(playerPrefab, playerListParent.transform);
-        currentInstantiatedPlayerList.Add(newPlayer);
+        _currentInstantiatedPlayerList.Add(newPlayer);
         newPlayer.UpdatePlayerName(player.NickName);
     } 
     private void RemovePlayerUI(Player player)
     {
-        var foundPlayerObject = currentInstantiatedPlayerList.Find(playerObject => playerObject.GetPlayerName() == player.NickName);
+        var foundPlayerObject = _currentInstantiatedPlayerList.Find(playerObject => playerObject.GetPlayerName() == player.NickName);
         if(foundPlayerObject == null)
         {
             return;
         }
-        currentInstantiatedPlayerList.Remove(foundPlayerObject);
+        _currentInstantiatedPlayerList.Remove(foundPlayerObject);
         Destroy(foundPlayerObject.gameObject);
     }
 
@@ -287,9 +287,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     private void ClearRoomPlayerList()
     {
-        foreach (var player in currentInstantiatedPlayerList)
+        foreach (var player in _currentInstantiatedPlayerList)
             Destroy(player.gameObject);
 
-        currentInstantiatedPlayerList.Clear();
+        _currentInstantiatedPlayerList.Clear();
     }
 }
