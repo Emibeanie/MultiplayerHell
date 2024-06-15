@@ -15,7 +15,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("Room List UI")]
     [SerializeField] GameObject roomListPanel;
     [SerializeField] Transform roomListParentObject;
-    [SerializeField] GameObject roomPrefab;
+    [SerializeField] RoomItem roomPrefab;
 
     [Header("Create Room UI")]
     [SerializeField] GameObject createRoomPanel;
@@ -25,11 +25,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("In Room UI")]
     [SerializeField] GameObject inRoomPanel;
     [SerializeField] TextMeshProUGUI inRoomMassage;
+    [SerializeField] VerticalLayoutGroup playerListParent;
+    [SerializeField] PlayerUIItem playerPrefab;
 
     [Header("Errors")]
     [SerializeField] TextMeshProUGUI errorMessageText;
 
-
+    private List<PlayerUIItem> currentInstantiatedPlayerList;
     private Dictionary<string, RoomInfo> cachedRoomList = new Dictionary<string, RoomInfo>();
     private string currentLobbyName;
     private bool isInitialConnection = true;
@@ -39,6 +41,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         connectingMassage.gameObject.SetActive(true);
         connectingMassage.text = "Connecting to the main server...";
         PhotonNetwork.ConnectUsingSettings();
+
+        currentInstantiatedPlayerList = new List<PlayerUIItem>();
 
         ResetErrorMessageText();
     }
@@ -116,26 +120,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             }
         }
 
-        UpdateUI();
+        UpdateLobbyRoomListUI();
     }
 
-
-    void UpdateUI()
-    {
-        foreach (Transform roomItem in roomListParentObject)
-        {
-            Destroy(roomItem.gameObject);
-        }
-
-        foreach (var room in cachedRoomList)
-        {
-            GameObject roomGO = Instantiate(roomPrefab, roomListParentObject);
-
-            RoomItem roomItem = roomGO.GetComponent<RoomItem>(); //Find how to not use getcomponent
-
-            roomItem?.SetRoomInfo(room.Value.Name, room.Value.PlayerCount, room.Value.MaxPlayers);
-        }
-    }
 
     public void CreateRoomInCurrentLobby()
     {
@@ -171,6 +158,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         ResetErrorMessageText();
     }
+
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
         base.OnCreateRoomFailed(returnCode, message);
@@ -186,6 +174,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         inRoomPanel.SetActive(true);
         inRoomMassage.text = $"You joined room '{PhotonNetwork.CurrentRoom.Name}' in lobby '{currentLobbyName}'";
+        InitPlayerList();
 
         ResetErrorMessageText();
     }
@@ -194,6 +183,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         base.OnJoinRoomFailed(returnCode, message);
         ChangeErrorMessageText(message);
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        base.OnPlayerEnteredRoom(newPlayer);
+        CreateNewPlayerUI(newPlayer);
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        base.OnPlayerLeftRoom(otherPlayer);
+        RemovePlayerUI(otherPlayer);
     }
 
     public void ExitRoom()
@@ -239,5 +240,56 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     private void ChangeErrorMessageText(string text)
     {
         errorMessageText.text = text;
+    }
+
+    private void UpdateLobbyRoomListUI()
+    {
+        foreach (Transform roomItem in roomListParentObject)
+        {
+            Destroy(roomItem.gameObject);
+        }
+
+        foreach (var room in cachedRoomList)
+        {
+            RoomItem roomItem = Instantiate(roomPrefab, roomListParentObject);
+
+            roomItem.SetRoomInfo(room.Value.Name, room.Value.PlayerCount, room.Value.MaxPlayers);
+        }
+    }
+    private void CreateNewPlayerUI(Player player)
+    {
+        var newPlayer = Instantiate(playerPrefab, playerListParent.transform);
+        currentInstantiatedPlayerList.Add(newPlayer);
+        newPlayer.UpdatePlayerName(player.NickName);
+    } 
+    private void RemovePlayerUI(Player player)
+    {
+        var foundPlayerObject = currentInstantiatedPlayerList.Find(playerObject => playerObject.GetPlayerName() == player.NickName);
+        if(foundPlayerObject == null)
+        {
+            return;
+        }
+        currentInstantiatedPlayerList.Remove(foundPlayerObject);
+        Destroy(foundPlayerObject.gameObject);
+    }
+
+    private void InitPlayerList()
+    {
+        ClearRoomPlayerList();
+
+        var playersInRoom = PhotonNetwork.CurrentRoom.Players;
+
+        foreach (var player in playersInRoom)
+        {
+            CreateNewPlayerUI(player.Value);
+        }
+    }
+
+    private void ClearRoomPlayerList()
+    {
+        foreach (var player in currentInstantiatedPlayerList)
+            Destroy(player.gameObject);
+
+        currentInstantiatedPlayerList.Clear();
     }
 }

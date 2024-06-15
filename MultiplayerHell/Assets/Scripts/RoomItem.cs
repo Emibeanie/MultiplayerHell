@@ -10,7 +10,6 @@ public class RoomItem : MonoBehaviour
     private string roomName;
 
 
-
     public void SetRoomInfo(string name, int playerCount, int maxPlayers)
     {
         roomName = name;
