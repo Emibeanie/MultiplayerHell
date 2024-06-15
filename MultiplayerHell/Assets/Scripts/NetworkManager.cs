@@ -85,16 +85,27 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         roomListPanel.SetActive(true);
         createRoomPanel.SetActive(true);
 
+        cachedRoomList.Clear();
         ResetErrorMessageText();
+    }
+
+    public override void OnLeftLobby()
+    {
+        base.OnLeftLobby();
+
+        cachedRoomList.Clear();
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
     {
         base.OnRoomListUpdate(roomList);
 
+        Debug.Log($"cached rooms: {cachedRoomList.Count} room list: {roomList.Count}");
+
         for (int i = 0; i < roomList.Count; i++)
         {
             RoomInfo info = roomList[i];
+
             if (info.RemovedFromList)
             {
                 cachedRoomList.Remove(info.Name);
@@ -104,6 +115,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
                 cachedRoomList[info.Name] = info;
             }
         }
+
         UpdateUI();
     }
 
@@ -200,6 +212,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         roomName.text = "";
         maxPlayers.text = "";
+
+        cachedRoomList.Clear();
     }
 
     public override void OnDisconnected(DisconnectCause cause)
