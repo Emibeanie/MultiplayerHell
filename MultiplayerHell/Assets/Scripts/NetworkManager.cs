@@ -7,43 +7,32 @@ using UnityEngine.UI;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
-    [Header("Enter Lobby UI")]
-    [SerializeField] TextMeshProUGUI connectingMassage;
-    [SerializeField] GameObject enterLobbyPanel;
-    [SerializeField] TMP_InputField playerNicknameField;
-    [SerializeField] TMP_InputField lobbyNameField;
+    public static NetworkManager Instance;
 
-    [Header("Room List UI")]
-    [SerializeField] GameObject roomListPanel;
-    [SerializeField] Transform roomListParentObject;
-    [SerializeField] RoomItem roomPrefab;
+    [SerializeField] Camera cameraUI;
 
-    [Header("Create Room UI")]
-    [SerializeField] GameObject createRoomPanel;
-    [SerializeField] TMP_InputField roomName;
-    [SerializeField] TMP_InputField maxPlayers;
+    private string playerPrefabPath = "FPSPlayer";
+    private string Level1PrefabPath = "Level1";
 
-    [Header("In Room UI")]
-    [SerializeField] GameObject inRoomPanel;
-    [SerializeField] TextMeshProUGUI inRoomMassage;
-    [SerializeField] VerticalLayoutGroup playerListParent;
-    [SerializeField] PlayerUIItem playerPrefab;
-
-    [Header("Errors")]
-    [SerializeField] TextMeshProUGUI errorMessageText;
+    UIManager _uiManagerInstance;
 
     private List<PlayerUIItem> _currentInstantiatedPlayerList = new();
     private Dictionary<string, RoomInfo> _cachedRoomList = new();
     private string _currentLobbyName;
     private bool _isInitialConnection = true;
 
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     void Start()
     {
-        connectingMassage.gameObject.SetActive(true);
-        connectingMassage.text = "Connecting to the main server...";
+        _uiManagerInstance = UIManager.Instance;
+
+        _uiManagerInstance.DisplayStartMassage();
         PhotonNetwork.ConnectUsingSettings();
-        
-        ResetErrorMessageText();
+        _uiManagerInstance.ResetErrorMessageText();
     }
 
     public override void OnConnectedToMaster()
@@ -52,8 +41,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         if (_isInitialConnection)
         {
-            connectingMassage.gameObject.SetActive(false);
-            enterLobbyPanel.SetActive(true);
+            _uiManagerInstance.DisplayLobbyPanel();
             _isInitialConnection = false;
         }
         else if (!string.IsNullOrEmpty(_currentLobbyName))
@@ -63,26 +51,26 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             PhotonNetwork.JoinLobby(lobby);
         }
 
-        ResetErrorMessageText();
+        _uiManagerInstance.ResetErrorMessageText();
     }
 
     public void CreateAndJoinLobbyByName()
     {
-        if (playerNicknameField.text == string.Empty || playerNicknameField.text.Length < 3)
+        if (_uiManagerInstance.GetPlayerNickNameTextField() == string.Empty || _uiManagerInstance.GetPlayerNickNameTextField().Length < 3)
         {
-            ChangeErrorMessageText("Player Nickname must contain at least 3 characters!");
+            _uiManagerInstance.ChangeErrorMessageText("Player Nickname must contain at least 3 characters!");
             return;
         }
         
-        PhotonNetwork.LocalPlayer.NickName = playerNicknameField.text;
+        PhotonNetwork.LocalPlayer.NickName = _uiManagerInstance.GetPlayerNickNameTextField();
         
-        if (lobbyNameField.text == string.Empty)
+        if (_uiManagerInstance.GetLobbyTextField() == string.Empty)
         {
-            ChangeErrorMessageText("Lobby name must contain at least 1 character");
+            _uiManagerInstance.ChangeErrorMessageText("Lobby name must contain at least 1 character");
             return;
         }
 
-        _currentLobbyName = lobbyNameField.text;
+        _currentLobbyName = _uiManagerInstance.GetLobbyTextField();
         TypedLobby lobby = new TypedLobby(_currentLobbyName, LobbyType.Default);
         PhotonNetwork.JoinLobby(lobby);
     }
@@ -91,12 +79,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         base.OnJoinedLobby();
 
-        enterLobbyPanel.SetActive(false);
-        roomListPanel.SetActive(true);
-        createRoomPanel.SetActive(true);
+        _uiManagerInstance.DisplayRoomList();
 
         _cachedRoomList.Clear();
-        ResetErrorMessageText();
+        _uiManagerInstance.ResetErrorMessageText();
     }
 
     public override void OnLeftLobby()
@@ -122,25 +108,24 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             }
         }
 
-        UpdateLobbyRoomListUI();
+        _uiManagerInstance.UpdateLobbyRoomListUI(_cachedRoomList);
     }
 
 
     public void CreateRoomInCurrentLobby()
     {
-        if (roomName.text == string.Empty)
+        if (_uiManagerInstance.GetRoomNameTextField() == string.Empty)
         {
-            ChangeErrorMessageText("Room name must contain at least one character");
+            _uiManagerInstance.ChangeErrorMessageText("Room name must contain at least one character");
             return;
         }
 
-        if (maxPlayers.text == string.Empty || !int.TryParse(maxPlayers.text,out int maxPlayerInt) || maxPlayerInt <= 1)
+        if (_uiManagerInstance.GetMaxPlayerTextField() == string.Empty || !int.TryParse(_uiManagerInstance.GetMaxPlayerTextField(), out int maxPlayerInt) || maxPlayerInt <= 1)
         {
-            ChangeErrorMessageText("Room max players must be filled and contain only a number bigger than 1");
+            _uiManagerInstance.ChangeErrorMessageText("Room max players must be filled and contain only a number bigger than 1");
             return;
         }
-
-        string roomNameStr = roomName.text;
+        string roomNameStr = _uiManagerInstance.GetRoomNameTextField();
        // int maxPlayerInt = int.Parse(maxPlayers.text);
 
         RoomOptions roomOptions = new RoomOptions
@@ -157,40 +142,36 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnCreatedRoom()
     {
         base.OnCreatedRoom();
-        
-        ResetErrorMessageText();
+        _uiManagerInstance.ResetErrorMessageText();
+        SpawnMap();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
         base.OnCreateRoomFailed(returnCode, message);
-        ChangeErrorMessageText(message);
+        _uiManagerInstance.ChangeErrorMessageText(message);
     }
 
     public override void OnJoinedRoom()
     {
         base.OnJoinedRoom();
 
-        createRoomPanel.SetActive(false);
-        roomListPanel.SetActive(false);
-
-        inRoomPanel.SetActive(true);
-        inRoomMassage.text = $"Room '{PhotonNetwork.CurrentRoom.Name}' | Lobby '{_currentLobbyName}'";
+        _uiManagerInstance.DisplayCharacterSelection();
         InitPlayerList();
 
-        ResetErrorMessageText();
+        _uiManagerInstance.ResetErrorMessageText();
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
         base.OnJoinRoomFailed(returnCode, message);
-        ChangeErrorMessageText(message);
+        _uiManagerInstance.ChangeErrorMessageText(message);
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
         base.OnPlayerEnteredRoom(newPlayer);
-        CreateNewPlayerUI(newPlayer);
+        _uiManagerInstance.CreateNewPlayerUI(newPlayer, _currentInstantiatedPlayerList);
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -198,70 +179,30 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         base.OnPlayerLeftRoom(otherPlayer);
         RemovePlayerUI(otherPlayer);
     }
-
-    public void ExitRoom()
-    {
-        PhotonNetwork.LeaveRoom();
-    }
-
     public override void OnLeftRoom()
     {
         base.OnLeftRoom();
 
-        inRoomPanel.SetActive(false);
-        createRoomPanel.SetActive(true);
-        roomListPanel.SetActive(true);
-
-        roomName.text = "";
-        maxPlayers.text = "";
+        _uiManagerInstance.DisplayExitRoom();
 
         _cachedRoomList.Clear();
     }
-
     public override void OnDisconnected(DisconnectCause cause)
     {
         base.OnDisconnected(cause);
 
-        inRoomPanel.SetActive(false);
-        createRoomPanel.SetActive(false);
-        roomListPanel.SetActive(false);
-        enterLobbyPanel.SetActive(false);
-        connectingMassage.gameObject.SetActive(true);
-        connectingMassage.text = $"Disconnected: {cause}. Reconnecting...";
+        _uiManagerInstance.DisplayDisconnecting(cause);
 
         _isInitialConnection = true;
 
         PhotonNetwork.ConnectUsingSettings();
     }
-    private void ResetErrorMessageText()
+  
+    public void ExitRoom()
     {
-        errorMessageText.text = "";
-    }
-    private void ChangeErrorMessageText(string text)
-    {
-        errorMessageText.text = text;
+        PhotonNetwork.LeaveRoom();
     }
 
-    private void UpdateLobbyRoomListUI()
-    {
-        foreach (Transform roomItem in roomListParentObject)
-        {
-            Destroy(roomItem.gameObject);
-        }
-
-        foreach (var room in _cachedRoomList)
-        {
-            RoomItem roomItem = Instantiate(roomPrefab, roomListParentObject);
-
-            roomItem.SetRoomInfo(room.Value.Name, room.Value.PlayerCount, room.Value.MaxPlayers);
-        }
-    }
-    private void CreateNewPlayerUI(Player player)
-    {
-        var newPlayer = Instantiate(playerPrefab, playerListParent.transform);
-        _currentInstantiatedPlayerList.Add(newPlayer);
-        newPlayer.UpdatePlayerName(player.NickName);
-    } 
     private void RemovePlayerUI(Player player)
     {
         var foundPlayerObject = _currentInstantiatedPlayerList.Find(playerObject => playerObject.GetPlayerName() == player.NickName);
@@ -281,8 +222,21 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         foreach (var player in playersInRoom)
         {
-            CreateNewPlayerUI(player.Value);
+            _uiManagerInstance.CreateNewPlayerUI(player.Value, _currentInstantiatedPlayerList);
         }
+    }
+
+    public void SpawnNewPlayer()
+    {
+        _uiManagerInstance.DisplayGamplay();
+        var player = PhotonNetwork.Instantiate(playerPrefabPath, new Vector3(0, 1, 0), Quaternion.identity);
+        /*player.GetComponent<PlayerSetup>()?.IsLocalPlayer();*/
+        cameraUI.gameObject.SetActive(false);
+    }
+
+    public void SpawnMap()
+    {
+        PhotonNetwork.InstantiateRoomObject(Level1PrefabPath, Vector3.zero, Quaternion.identity);
     }
 
     private void ClearRoomPlayerList()
