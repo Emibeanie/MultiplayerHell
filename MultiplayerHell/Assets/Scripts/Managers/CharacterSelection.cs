@@ -13,7 +13,7 @@ public class CharacterSelection : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            // Initialize  room property when first player joins
+            // Initialize room property when first player joins
             UpdateChosenCharactersProperty();
         }
         else

@@ -1843,7 +1843,7 @@ GameObject:
   - component: {fileID: 405775063}
   - component: {fileID: 405775062}
   m_Layer: 5
-  m_Name: Button (3)
+  m_Name: Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2635,7 +2635,7 @@ GameObject:
   m_Component:
   - component: {fileID: 795308269}
   m_Layer: 5
-  m_Name: In Room Panel
+  m_Name: In Room Panel (not in use)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6463,7 +6463,7 @@ GameObject:
   - component: {fileID: 2003824702}
   - component: {fileID: 2003824701}
   m_Layer: 5
-  m_Name: Button (2)
+  m_Name: Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6774,7 +6774,7 @@ GameObject:
   - component: {fileID: 2049983967}
   - component: {fileID: 2049983966}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
