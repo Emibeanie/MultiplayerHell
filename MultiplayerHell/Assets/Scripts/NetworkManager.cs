@@ -142,7 +142,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnCreatedRoom()
     {
         base.OnCreatedRoom();
-
         _uiManagerInstance.ResetErrorMessageText();
         SpawnMap();
     }
@@ -231,7 +230,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         _uiManagerInstance.DisplayGamplay();
         var player = PhotonNetwork.Instantiate(playerPrefabPath, new Vector3(0, 1, 0), Quaternion.identity);
-        player.GetComponent<PlayerSetup>()?.IsLocalPlayer();
+        /*player.GetComponent<PlayerSetup>()?.IsLocalPlayer();*/
         cameraUI.gameObject.SetActive(false);
     }
 

@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8060100080730565513}
   - component: {fileID: 5627796719335391766}
   - component: {fileID: 7294919582354215987}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: FPSPlayer
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -150,7 +150,7 @@ GameObject:
   - component: {fileID: 3139468604891269304}
   - component: {fileID: 4054281848847041261}
   - component: {fileID: 5580009025618485627}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Eyes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -257,7 +257,7 @@ GameObject:
   - component: {fileID: 5949836429782478851}
   - component: {fileID: 1818847008898604610}
   - component: {fileID: 611196570814434798}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -343,7 +343,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1902888230376297491}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: GroundCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -378,7 +378,7 @@ GameObject:
   - component: {fileID: 7771155743067907887}
   - component: {fileID: 6401401115656645710}
   - component: {fileID: 2734189374101447921}
-  m_Layer: 7
+  m_Layer: 3
   m_Name: Player Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}

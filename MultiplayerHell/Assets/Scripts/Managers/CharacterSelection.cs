@@ -1,5 +1,6 @@
 using Photon.Pun;
 using Photon.Realtime;
+using Unity.XR.OpenVR;
 using UnityEngine;
 
 public class CharacterSelection : MonoBehaviourPunCallbacks
@@ -12,17 +13,25 @@ public class CharacterSelection : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            // Initialize the room property when the first player joins
+            // Initialize  room property when first player joins
             UpdateChosenCharactersProperty();
         }
         else
         {
-            // For non-master clients, retrieve the current state
+            // non-master clients, return the current state
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(CHOSEN_CHARACTERS_KEY, out object chosenCharsObj))
             {
                 choosenCharacters = (int[])chosenCharsObj;
             }
         }
+    }
+
+    public override void OnCreatedRoom()
+    {
+        base.OnCreatedRoom();
+
+        // scaleable amount of players
+        /*  choosenCharacters = new int[PhotonNetwork.CurrentRoom.MaxPlayers];*/
     }
 
     public void PlayerSelectCharacter(int index)
@@ -62,7 +71,7 @@ public class CharacterSelection : MonoBehaviourPunCallbacks
         if (propertiesThatChanged.TryGetValue(CHOSEN_CHARACTERS_KEY, out object chosenCharsObj))
         {
             choosenCharacters = (int[])chosenCharsObj;
-            // You might want to update UI here to reflect the changes
+            // update UI here
         }
     }
 }

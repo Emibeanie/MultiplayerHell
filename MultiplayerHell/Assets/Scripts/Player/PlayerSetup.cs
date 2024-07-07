@@ -6,7 +6,11 @@ public class PlayerSetup : MonoBehaviour
 {
     [SerializeField] PlayerMovment playerMovment;
     [SerializeField] GameObject playerCamera;
-   
+
+    private void Start()
+    {
+        IsLocalPlayer();
+    }
 
     public void IsLocalPlayer()
     {
