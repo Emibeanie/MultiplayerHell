@@ -129,7 +129,7 @@ public class UIManager : MonoBehaviour
             roomItem.SetRoomInfo(room.Value.Name, room.Value.PlayerCount, room.Value.MaxPlayers);
         }
     }
-    public void CreateNewPlayerUI(Player player, List<PlayerUIItem> currentInstantiatedPlayerList)
+    public void CreateNewPlayerUI(Photon.Realtime.Player player, List<PlayerUIItem> currentInstantiatedPlayerList)
     {
         var newPlayer = Instantiate(playerPrefab, playerListParent.transform);
         currentInstantiatedPlayerList.Add(newPlayer);

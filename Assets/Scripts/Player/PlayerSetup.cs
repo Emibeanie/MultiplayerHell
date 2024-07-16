@@ -1,21 +1,27 @@
-using System.Collections;
-using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public class PlayerSetup : MonoBehaviour
+namespace Player
 {
-    [SerializeField] PlayerMovment playerMovment;
-    [SerializeField] GameObject playerCamera;
-
-    private void Start()
+    public class PlayerSetup : MonoBehaviourPun
     {
-        IsLocalPlayer();
-    }
+        [FormerlySerializedAs("playerMovment")] [SerializeField] PlayerMovment playerMovement;
+        [SerializeField] GameObject playerCamera;
 
-    public void IsLocalPlayer()
-    {
-        playerMovment.enabled = true;
-        playerCamera.SetActive(true);
-    }
+        private void Start()
+        {
+            if (photonView.IsMine)
+            {
+                TurnOnLocalPlayer();
+            }
+        }
 
+        private void TurnOnLocalPlayer()
+        {
+            playerMovement.enabled = true;
+            playerCamera.SetActive(true);
+        }
+
+    }
 }
