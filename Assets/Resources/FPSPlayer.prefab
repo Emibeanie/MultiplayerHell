@@ -106,6 +106,7 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: 5627796719335391766}
+  - {fileID: 3016125736405989308}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -137,7 +138,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4b49579868ece6429c2d7cdab4c86a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerMovment: {fileID: 1308827206434841034}
+  playerMovement: {fileID: 1308827206434841034}
   playerCamera: {fileID: 7557203885162123984}
 --- !u!1 &874610220943486548
 GameObject:
@@ -576,6 +577,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 57fb358b009554e8ebd8efc2a355c4b2, type: 3}
+--- !u!114 &3016125736405989308 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 885063592412826530, guid: 57fb358b009554e8ebd8efc2a355c4b2, type: 3}
+  m_PrefabInstance: {fileID: 2707524042012867614}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &6036567426632645688 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8526788342373695526, guid: 57fb358b009554e8ebd8efc2a355c4b2, type: 3}
