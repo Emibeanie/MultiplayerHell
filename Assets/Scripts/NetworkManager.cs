@@ -1,9 +1,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -11,13 +9,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     [SerializeField] Camera cameraUI;
 
-    private string playerPrefabPath = "FPSPlayer";
-    private string Level1PrefabPath = "Level1";
+    private readonly string _playerPrefabPath = "FPSPlayer";
+    private readonly string _level1PrefabPath = "Level1";
 
     UIManager _uiManagerInstance;
 
-    private List<PlayerUIItem> _currentInstantiatedPlayerList = new();
-    private Dictionary<string, RoomInfo> _cachedRoomList = new();
+    private readonly List<PlayerUIItem> _currentInstantiatedPlayerList = new();
+    private readonly Dictionary<string, RoomInfo> _cachedRoomList = new();
     private string _currentLobbyName;
     private bool _isInitialConnection = true;
 
@@ -26,7 +24,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         Instance = this;
     }
 
-    void Start()
+    private void Start()
     {
         _uiManagerInstance = UIManager.Instance;
 
@@ -168,13 +166,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         _uiManagerInstance.ChangeErrorMessageText(message);
     }
 
-    public override void OnPlayerEnteredRoom(Player newPlayer)
+    public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
     {
         base.OnPlayerEnteredRoom(newPlayer);
         _uiManagerInstance.CreateNewPlayerUI(newPlayer, _currentInstantiatedPlayerList);
     }
 
-    public override void OnPlayerLeftRoom(Player otherPlayer)
+    public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
     {
         base.OnPlayerLeftRoom(otherPlayer);
         RemovePlayerUI(otherPlayer);
@@ -203,7 +201,27 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PhotonNetwork.LeaveRoom();
     }
 
-    private void RemovePlayerUI(Player player)
+    public void SpawnNewPlayer()
+    {
+        _uiManagerInstance.DisplayGamplay();
+        PhotonNetwork.Instantiate(_playerPrefabPath, new Vector3(0, 1, 0), Quaternion.identity);
+        cameraUI.gameObject.SetActive(false);
+    }
+
+    private void SpawnMap()
+    {
+        PhotonNetwork.InstantiateRoomObject(_level1PrefabPath, Vector3.zero, Quaternion.identity);
+    }
+
+    private void ClearRoomPlayerList()
+    {
+        foreach (var player in _currentInstantiatedPlayerList)
+            Destroy(player.gameObject);
+
+        _currentInstantiatedPlayerList.Clear();
+    }
+    
+    private void RemovePlayerUI(Photon.Realtime.Player player)
     {
         var foundPlayerObject = _currentInstantiatedPlayerList.Find(playerObject => playerObject.GetPlayerName() == player.NickName);
         if(foundPlayerObject == null)
@@ -224,26 +242,5 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         {
             _uiManagerInstance.CreateNewPlayerUI(player.Value, _currentInstantiatedPlayerList);
         }
-    }
-
-    public void SpawnNewPlayer()
-    {
-        _uiManagerInstance.DisplayGamplay();
-        var player = PhotonNetwork.Instantiate(playerPrefabPath, new Vector3(0, 1, 0), Quaternion.identity);
-        /*player.GetComponent<PlayerSetup>()?.IsLocalPlayer();*/
-        cameraUI.gameObject.SetActive(false);
-    }
-
-    public void SpawnMap()
-    {
-        PhotonNetwork.InstantiateRoomObject(Level1PrefabPath, Vector3.zero, Quaternion.identity);
-    }
-
-    private void ClearRoomPlayerList()
-    {
-        foreach (var player in _currentInstantiatedPlayerList)
-            Destroy(player.gameObject);
-
-        _currentInstantiatedPlayerList.Clear();
     }
 }
