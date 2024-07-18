@@ -39,7 +39,8 @@ MonoBehaviour:
   - DestroySpaceship
   - Fire
   - RespawnSpaceship
-  - PlayerTookDamageRpc
+  - SendMessageToChat
+  - RPC_SendMessageToChat
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
