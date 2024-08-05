@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: PhotonServerSettings
   m_EditorClassIdentifier: 
   AppSettings:
-    AppIdRealtime: 9bd41bea-12c1-4773-bef4-37a35590e8f4
+    AppIdRealtime: 38174303-13bf-4556-9c9b-cb2e1a863436
     AppIdFusion: 
     AppIdChat: 
     AppIdVoice: 
@@ -36,10 +36,12 @@ MonoBehaviour:
   RpcList:
   - ClickRpc
   - DestroyRpc
+  - AddTeamScore
+  - InitTeamScore
   - DestroySpaceship
   - Fire
+  - PlayerTookDamageRpc
   - RespawnSpaceship
-  - SendMessageToChat
   - RPC_SendMessageToChat
   DisableAutoOpenWizard: 1
   ShowSettings: 0
