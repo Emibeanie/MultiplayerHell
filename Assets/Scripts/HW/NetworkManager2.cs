@@ -31,11 +31,13 @@ public class NetworkManager2 : MonoBehaviourPunCallbacks
         {
             MaxPlayers = (byte)6,
             IsVisible = true,
+            IsOpen = true,
+            PlayerTtl = 30,
         };
 
-        TypedLobby typedLobby = new TypedLobby("Test", LobbyType.Default);
+        TypedLobby typedLobby = new TypedLobby("Main", LobbyType.Default);
 
-        PhotonNetwork.JoinOrCreateRoom("Test", roomOptions, typedLobby);
+        PhotonNetwork.JoinOrCreateRoom("Simple_Test", roomOptions, typedLobby);
     }
 
     public override void OnCreatedRoom()

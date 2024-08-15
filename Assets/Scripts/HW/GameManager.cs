@@ -4,6 +4,7 @@ using UnityEngine;
 using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
@@ -26,6 +27,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField] private Transform spawnedObjectsParent;
     [SerializeField] private TextMeshProUGUI nextSpawnPlaceText;
     [SerializeField] private TextMeshProUGUI roomManagerText;
+    [SerializeField] private TextMeshProUGUI latestMessageText;
     
     [SerializeField] private Button grantMasterClientButton;
     private int nextSpawnIndex;
@@ -33,7 +35,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     public void AddTeamScore()
     {
         teamScore += bonusScore;
-        teamScoreText.text = $"Team Score: {teamScore}";
+        UpdateTeamScoreText();
 
         ExitGames.Client.Photon.Hashtable properties = new ExitGames.Client.Photon.Hashtable
         {
@@ -50,6 +52,7 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        UpdateTeamScoreText();
         if (PhotonNetwork.IsMasterClient)
         {
             SpawnNewPlayer();
@@ -86,6 +89,18 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         PhotonNetwork.SetMasterClient(nextPlayer);
     }
+    
+    public void ArtificialAbandonRoom()
+    {
+        PhotonNetwork.LeaveRoom();
+        SceneManager.LoadSceneAsync(0);
+    }
+
+    public void DisconnectAndMoveBackToMainMenu()
+    {
+        PhotonNetwork.Disconnect();
+        SceneManager.LoadSceneAsync(0);
+    }
 
     public override void OnJoinedRoom()
     {
@@ -98,8 +113,15 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
+    public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
+    {
+        latestMessageText.text = $"Player #{newPlayer.ActorNumber} joined the room";
+    }
+
     public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
     {
+        latestMessageText.text = $"Player #{otherPlayer.ActorNumber} left the room";
+        
         if (!PhotonNetwork.IsMasterClient) return;
         
         grantMasterClientButton.gameObject.SetActive(PhotonNetwork.CurrentRoom.PlayerCount > 1);
@@ -139,7 +161,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
     {
-        Debug.Log($"Player #{newMasterClient.ActorNumber} is the MasterClient");
+        latestMessageText.text = $"Player #{newMasterClient.ActorNumber} is now the Room Manager";
         UpdateMasterClientUI(newMasterClient);
         UpdateNextSpawnIndexText();
 
@@ -158,5 +180,10 @@ public class GameManager : MonoBehaviourPunCallbacks
         roomManagerText.gameObject.SetActive(true);
 
         grantMasterClientButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
+    }
+    
+    private void UpdateTeamScoreText()
+    {
+        teamScoreText.text = $"Team Score: {teamScore}";
     }
 }
