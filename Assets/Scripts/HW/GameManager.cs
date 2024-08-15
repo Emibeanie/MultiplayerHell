@@ -1,8 +1,12 @@
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
@@ -10,22 +14,28 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     [Header("Bonus Score")]
 
-    [SerializeField] int bonusScore = 5;
-    [SerializeField] TextMeshProUGUI teamBounsText;
+    [SerializeField]
+    private int bonusScore = 5;
+    [FormerlySerializedAs("teamBounsText")] [SerializeField]
+    private TextMeshProUGUI teamScoreText;
     private const string TeamScoreKey = "teamScore";
     private int teamScore = 0;
 
     [Header("Object Spawn")]
-    [SerializeField] Transform[] spawnPoints;
-    [SerializeField] Transform spawnedObjectsParent;
-    [SerializeField] TextMeshProUGUI nextSpawnPlaceText;
-    [SerializeField] TextMeshProUGUI roomManagerText;
+    [SerializeField]
+    private Transform[] spawnPoints;
+    [SerializeField] private Transform spawnedObjectsParent;
+    [SerializeField] private TextMeshProUGUI nextSpawnPlaceText;
+    [SerializeField] private TextMeshProUGUI roomManagerText;
+    [SerializeField] private TextMeshProUGUI latestMessageText;
+    
+    [SerializeField] private Button grantMasterClientButton;
     private int nextSpawnIndex;
 
     public void AddTeamScore()
     {
         teamScore += bonusScore;
-        teamBounsText.text = $"Team Score: {teamScore}";
+        UpdateTeamScoreText();
 
         ExitGames.Client.Photon.Hashtable properties = new ExitGames.Client.Photon.Hashtable
         {
@@ -42,19 +52,54 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        UpdateTeamScoreText();
         if (PhotonNetwork.IsMasterClient)
         {
             SpawnNewPlayer();
-            StartCoroutine(SpawnNewObject());
-            DisplayNextSpawnIndex();
         }
+        OnMasterClientSwitched(PhotonNetwork.MasterClient);
     }
 
 
-    private void DisplayNextSpawnIndex()
+    private void UpdateNextSpawnIndexText()
     {
-        nextSpawnPlaceText.text = $"The gift spawn is: {nextSpawnIndex}";
-        nextSpawnPlaceText.gameObject.SetActive(true);
+        if (PhotonNetwork.IsMasterClient)
+        {
+            nextSpawnPlaceText.text = $"[Manager Only] Next spawn at index: {nextSpawnIndex}";
+            nextSpawnPlaceText.gameObject.SetActive(true);
+        }
+        else
+        {
+            nextSpawnPlaceText.gameObject.SetActive(false);
+        }
+    }
+
+    public void GrantMasterClientToNextPlayer()
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        
+        var isOnlyPlayer = PhotonNetwork.CurrentRoom.PlayerCount == 1;
+        if (isOnlyPlayer) return;
+        
+        var nextPlayer = PhotonNetwork.CurrentRoom.Players
+            .Values
+            .FirstOrDefault(player => player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber + 1) ?? PhotonNetwork.CurrentRoom.Players
+            .Values
+            .First(player => player.ActorNumber != PhotonNetwork.LocalPlayer.ActorNumber);
+
+        PhotonNetwork.SetMasterClient(nextPlayer);
+    }
+    
+    public void ArtificialAbandonRoom()
+    {
+        PhotonNetwork.LeaveRoom();
+        SceneManager.LoadSceneAsync(0);
+    }
+
+    public void DisconnectAndMoveBackToMainMenu()
+    {
+        PhotonNetwork.Disconnect();
+        SceneManager.LoadSceneAsync(0);
     }
 
     public override void OnJoinedRoom()
@@ -64,21 +109,36 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(TeamScoreKey))
         {
             teamScore = (int)PhotonNetwork.CurrentRoom.CustomProperties[TeamScoreKey];
-            teamBounsText.text = $"Team Score: {teamScore}";
+            teamScoreText.text = $"Team Score: {teamScore}";
         }
     }
 
-    void SpawnNewPlayer()
+    public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
+    {
+        latestMessageText.text = $"Player #{newPlayer.ActorNumber} joined the room";
+    }
+
+    public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+    {
+        latestMessageText.text = $"Player #{otherPlayer.ActorNumber} left the room";
+        
+        if (!PhotonNetwork.IsMasterClient) return;
+        
+        grantMasterClientButton.gameObject.SetActive(PhotonNetwork.CurrentRoom.PlayerCount > 1);
+    }
+
+    private void SpawnNewPlayer()
     {
         GameObject player = PhotonNetwork.Instantiate("Player", new Vector3(0,0,-.1f), Quaternion.identity);
         player?.GetComponent<PlayerSetup>().IsPlayerOwner();
     }
 
-    IEnumerator SpawnNewObject()
+    private IEnumerator SpawnNewObject()
     {
 
         nextSpawnIndex = Random.Range(0, spawnPoints.Length);
-        nextSpawnPlaceText.text = $"The gift spawn is: {nextSpawnIndex}";
+
+        UpdateNextSpawnIndexText();
 
         UpdateRoomState();
 
@@ -101,17 +161,29 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
     {
-        Debug.Log($"{newMasterClient.NickName} is the new MasterClient");
+        latestMessageText.text = $"Player #{newMasterClient.ActorNumber} is now the Room Manager";
         UpdateMasterClientUI(newMasterClient);
+        UpdateNextSpawnIndexText();
+
         if (PhotonNetwork.IsMasterClient)
         {
-            DisplayNextSpawnIndex();
             StartCoroutine(SpawnNewObject());
+        }
+        else
+        {
+            grantMasterClientButton.gameObject.SetActive(false);
         }
     }
     private void UpdateMasterClientUI(Photon.Realtime.Player newMasterClient)
     {
-        roomManagerText.text = $"{newMasterClient.NickName} is now the Room Manager!";
+        roomManagerText.text = $"Player #{newMasterClient.ActorNumber} is the Room Manager";
         roomManagerText.gameObject.SetActive(true);
+
+        grantMasterClientButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
+    }
+    
+    private void UpdateTeamScoreText()
+    {
+        teamScoreText.text = $"Team Score: {teamScore}";
     }
 }
