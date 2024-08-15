@@ -3,6 +3,7 @@ using UnityEngine;
 using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
@@ -10,22 +11,25 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     [Header("Bonus Score")]
 
-    [SerializeField] int bonusScore = 5;
-    [SerializeField] TextMeshProUGUI teamBounsText;
+    [SerializeField]
+    private int bonusScore = 5;
+    [FormerlySerializedAs("teamBounsText")] [SerializeField]
+    private TextMeshProUGUI teamScoreText;
     private const string TeamScoreKey = "teamScore";
     private int teamScore = 0;
 
     [Header("Object Spawn")]
-    [SerializeField] Transform[] spawnPoints;
-    [SerializeField] Transform spawnedObjectsParent;
-    [SerializeField] TextMeshProUGUI nextSpawnPlaceText;
-    [SerializeField] TextMeshProUGUI roomManagerText;
+    [SerializeField]
+    private Transform[] spawnPoints;
+    [SerializeField] private Transform spawnedObjectsParent;
+    [SerializeField] private TextMeshProUGUI nextSpawnPlaceText;
+    [SerializeField] private TextMeshProUGUI roomManagerText;
     private int nextSpawnIndex;
 
     public void AddTeamScore()
     {
         teamScore += bonusScore;
-        teamBounsText.text = $"Team Score: {teamScore}";
+        teamScoreText.text = $"Team Score: {teamScore}";
 
         ExitGames.Client.Photon.Hashtable properties = new ExitGames.Client.Photon.Hashtable
         {
@@ -45,15 +49,16 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             SpawnNewPlayer();
-            StartCoroutine(SpawnNewObject());
-            DisplayNextSpawnIndex();
         }
+        OnMasterClientSwitched(PhotonNetwork.MasterClient);
     }
 
 
-    private void DisplayNextSpawnIndex()
+    private void UpdateNextSpawnIndexIfMasterClient()
     {
-        nextSpawnPlaceText.text = $"The gift spawn is: {nextSpawnIndex}";
+        if (!PhotonNetwork.IsMasterClient) return;
+        
+        nextSpawnPlaceText.text = $"[Manager Only] Next spawn at index: {nextSpawnIndex}";
         nextSpawnPlaceText.gameObject.SetActive(true);
     }
 
@@ -64,21 +69,22 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(TeamScoreKey))
         {
             teamScore = (int)PhotonNetwork.CurrentRoom.CustomProperties[TeamScoreKey];
-            teamBounsText.text = $"Team Score: {teamScore}";
+            teamScoreText.text = $"Team Score: {teamScore}";
         }
     }
 
-    void SpawnNewPlayer()
+    private void SpawnNewPlayer()
     {
         GameObject player = PhotonNetwork.Instantiate("Player", new Vector3(0,0,-.1f), Quaternion.identity);
         player?.GetComponent<PlayerSetup>().IsPlayerOwner();
     }
 
-    IEnumerator SpawnNewObject()
+    private IEnumerator SpawnNewObject()
     {
 
         nextSpawnIndex = Random.Range(0, spawnPoints.Length);
-        nextSpawnPlaceText.text = $"The gift spawn is: {nextSpawnIndex}";
+
+        UpdateNextSpawnIndexIfMasterClient();
 
         UpdateRoomState();
 
@@ -101,17 +107,17 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
     {
-        Debug.Log($"{newMasterClient.NickName} is the new MasterClient");
+        Debug.Log($"Player #{newMasterClient.ActorNumber} is the MasterClient");
         UpdateMasterClientUI(newMasterClient);
         if (PhotonNetwork.IsMasterClient)
         {
-            DisplayNextSpawnIndex();
+            UpdateNextSpawnIndexIfMasterClient();
             StartCoroutine(SpawnNewObject());
         }
     }
     private void UpdateMasterClientUI(Photon.Realtime.Player newMasterClient)
     {
-        roomManagerText.text = $"{newMasterClient.NickName} is now the Room Manager!";
+        roomManagerText.text = $"Player #{newMasterClient.NickName} is the Room Manager";
         roomManagerText.gameObject.SetActive(true);
     }
 }
