@@ -1,9 +1,11 @@
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 using Photon.Pun;
 using TMPro;
 using Photon.Realtime;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
@@ -24,6 +26,8 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField] private Transform spawnedObjectsParent;
     [SerializeField] private TextMeshProUGUI nextSpawnPlaceText;
     [SerializeField] private TextMeshProUGUI roomManagerText;
+    
+    [SerializeField] private Button grantMasterClientButton;
     private int nextSpawnIndex;
 
     public void AddTeamScore()
@@ -54,12 +58,33 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
 
 
-    private void UpdateNextSpawnIndexIfMasterClient()
+    private void UpdateNextSpawnIndexText()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            nextSpawnPlaceText.text = $"[Manager Only] Next spawn at index: {nextSpawnIndex}";
+            nextSpawnPlaceText.gameObject.SetActive(true);
+        }
+        else
+        {
+            nextSpawnPlaceText.gameObject.SetActive(false);
+        }
+    }
+
+    public void GrantMasterClientToNextPlayer()
     {
         if (!PhotonNetwork.IsMasterClient) return;
         
-        nextSpawnPlaceText.text = $"[Manager Only] Next spawn at index: {nextSpawnIndex}";
-        nextSpawnPlaceText.gameObject.SetActive(true);
+        var isOnlyPlayer = PhotonNetwork.CurrentRoom.PlayerCount == 1;
+        if (isOnlyPlayer) return;
+        
+        var nextPlayer = PhotonNetwork.CurrentRoom.Players
+            .Values
+            .FirstOrDefault(player => player.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber + 1) ?? PhotonNetwork.CurrentRoom.Players
+            .Values
+            .First(player => player.ActorNumber != PhotonNetwork.LocalPlayer.ActorNumber);
+
+        PhotonNetwork.SetMasterClient(nextPlayer);
     }
 
     public override void OnJoinedRoom()
@@ -73,6 +98,13 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
+    public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+        
+        grantMasterClientButton.gameObject.SetActive(PhotonNetwork.CurrentRoom.PlayerCount > 1);
+    }
+
     private void SpawnNewPlayer()
     {
         GameObject player = PhotonNetwork.Instantiate("Player", new Vector3(0,0,-.1f), Quaternion.identity);
@@ -84,7 +116,7 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         nextSpawnIndex = Random.Range(0, spawnPoints.Length);
 
-        UpdateNextSpawnIndexIfMasterClient();
+        UpdateNextSpawnIndexText();
 
         UpdateRoomState();
 
@@ -109,15 +141,22 @@ public class GameManager : MonoBehaviourPunCallbacks
     {
         Debug.Log($"Player #{newMasterClient.ActorNumber} is the MasterClient");
         UpdateMasterClientUI(newMasterClient);
+        UpdateNextSpawnIndexText();
+
         if (PhotonNetwork.IsMasterClient)
         {
-            UpdateNextSpawnIndexIfMasterClient();
             StartCoroutine(SpawnNewObject());
+        }
+        else
+        {
+            grantMasterClientButton.gameObject.SetActive(false);
         }
     }
     private void UpdateMasterClientUI(Photon.Realtime.Player newMasterClient)
     {
-        roomManagerText.text = $"Player #{newMasterClient.NickName} is the Room Manager";
+        roomManagerText.text = $"Player #{newMasterClient.ActorNumber} is the Room Manager";
         roomManagerText.gameObject.SetActive(true);
+
+        grantMasterClientButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
     }
 }
